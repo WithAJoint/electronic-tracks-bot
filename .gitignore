@@ -1,0 +1,7 @@
+out/
+venv/
+database/
+tracks/
+track_formats_available
+
+.idea/
