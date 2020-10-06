@@ -12,8 +12,10 @@ def _insert_context_property(context: CallbackContext, properties: dict):
 
 
 def _format_dialog_text(dialog, *entries):
-    formatted_dialog = dict(dialog)
-    formatted_dialog['TEXT'].format(*entries)
+    formatted_dialog = {
+        'TEXT': dialog['TEXT'].format(*entries),
+        'KEYBOARD': dialog['KEYBOARD']
+    }
     return formatted_dialog
 
 
