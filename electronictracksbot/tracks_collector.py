@@ -28,7 +28,7 @@ class TracksCollector:
     def get_title(self):
         return self._title
 
-    def get_filepath(self):
+    def get_track_filepath(self):
         return self._collection_manager.get_track_filepath(self._author, self._title)
 
 # scan for duplicate
