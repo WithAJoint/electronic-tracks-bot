@@ -1,12 +1,10 @@
 from pytube import YouTube
-from electronictracksbot.collection_storage import CollectionManager
 
 
 class TracksCollector:
 
-    def __init__(self, db_path, base_download_path):
+    def __init__(self, base_download_path):
         self._base_download_path = base_download_path
-        self._collection_manager = CollectionManager(db_path)
         self._track = None
 
     def acquire_metadata(self, track_link) -> None:
@@ -22,15 +20,14 @@ class TracksCollector:
         else:
             raise RuntimeError('Error occurred while retrieving track author and title')
 
+    def collect_acquired(self):
+        self._track.download(self._base_download_path)
+
     def get_author(self) -> str:
         return self._author
 
     def get_title(self):
         return self._title
 
-    def get_track_filepath(self):
-        return self._collection_manager.get_track_filepath(self._author, self._title)
-
-# scan for duplicate
-# download track and convert format
-# send new track
+    def get_filepath(self):
+        return self._base_download_path + self._track.default_filename
