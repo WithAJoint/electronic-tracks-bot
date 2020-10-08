@@ -21,10 +21,10 @@ class Track(BaseModel):
 class CollectionManager:
 
     def __init__(self, db_path):
-        self.__database = BaseModel._meta.database
-        self.__database.init(db_path)
-        self.__database.connect()
-        self.__database.create_tables([Author, Track])
+        self._database = BaseModel._meta.database
+        self._database.init(db_path)
+        self._database.connect()
+        self._database.create_tables([Author, Track])
 
     def add_track(self, author, title):
         author_id = Author.get_or_create(name=author);
