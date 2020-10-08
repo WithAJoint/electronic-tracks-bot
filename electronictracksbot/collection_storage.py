@@ -8,11 +8,13 @@ class BaseModel(Model):
 
 class Author(BaseModel):
     name = CharField(unique=True)
+    formatted_name = CharField()
 
 
 class Track(BaseModel):
     title = CharField()
-    author = ForeignKeyField(Author, backref='author')
+    formatted_title = CharField()
+    author = ForeignKeyField(Author, backref='tracks')
     filepath = CharField()
 
 
@@ -24,4 +26,9 @@ class CollectionManager:
         self.__database.connect()
         self.__database.create_tables([Author, Track])
 
-    
+    def add_track(self, author, title):
+        author_id = Author.get_or_create(name=author);
+        Track.create(title=title, author=author_id, filepath='test')
+
+    def contains_track
+
