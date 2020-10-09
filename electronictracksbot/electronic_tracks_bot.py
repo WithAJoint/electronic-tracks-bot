@@ -31,11 +31,11 @@ class DialogScheme:
                 'reply_markup': self._keyboard
             }
 
-    def finalize(self, *entries):
+    def finalize(self, *entries) -> Dialog:
         return DialogScheme.Dialog(self._text_template.format(*entries), self._keyboard)
 
     @staticmethod
-    def create_fixed(text, keyboard=InlineKeyboardMarkup([])):
+    def create_fixed(text, keyboard=InlineKeyboardMarkup([])) -> Dialog:
         return DialogScheme.Dialog(text, keyboard)
 
 
@@ -54,6 +54,8 @@ class ElectronicTracksBot:
     _SET_DIALOG = DialogScheme('Send new {}\n')
 
     _DUPLICATE_WARNING_DIALOG = DialogScheme.create_fixed('This track is already in the collection')
+
+    _DOWNLOAD_ERROR_DIALOG = DialogScheme.create_fixed('Error while downloading the track. Check logs')
 
     def __init__(self, api_token, collection_manager):
         self._updater = Updater(api_token, use_context=True)
@@ -76,14 +78,13 @@ class ElectronicTracksBot:
     def _collect_track(self, update: Update, context: CallbackContext):
         track_link = update.message.text
         try:
-            track = self._collection_manager.collectFromYoutube(track_link)
-        except RuntimeError as ex:
-            self._reply(update.message, str(ex))
+            track = self._collection_manager.collect_from_youtube(track_link)
+        except KeyError:
+            self._reply(update.message, **self._DOWNLOAD_ERROR_DIALOG.parameterize())
             return None
         if not track.is_new():
-            self._reply(update.message, self._DUPLICATE_WARNING_DIALOG)
+            self._reply(update.message, **self._DUPLICATE_WARNING_DIALOG.parameterize())
         _insert_context_property(context, {'AUTHOR': track.get_author(), 'TITLE': track.get_title()})
-        # reply_dialog = _format_dialog_text(self._MAIN_DIALOG, track.get_author(), track.get_title())
         dialog = self._MAIN_DIALOG.finalize(track.get_author(), track.get_title())
         self._reply(update.message, **dialog.parameterize())
         return self._MAIN_MENU
