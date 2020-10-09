@@ -13,39 +13,47 @@ def _insert_context_property(context: CallbackContext, properties: dict):
         context.user_data[key] = value
 
 
-def _format_dialog_text(dialog, *entries):
-    formatted_dialog = {
-        'TEXT': dialog['TEXT'].format(*entries),
-        'KEYBOARD': dialog['KEYBOARD']
-    }
-    return formatted_dialog
+class DialogScheme:
+
+    def __init__(self, text_template, keyboard=InlineKeyboardMarkup([])):
+        self._text_template = text_template
+        self._keyboard = keyboard
+
+    class Dialog:
+
+        def __init__(self, text, keyboard):
+            self._text = text
+            self._keyboard = keyboard
+
+        def parameterize(self):
+            return {
+                'text': self._text,
+                'reply_markup': self._keyboard
+            }
+
+    def finalize(self, *entries):
+        return DialogScheme.Dialog(self._text_template.format(*entries), self._keyboard)
+
+    @staticmethod
+    def create_fixed(text, keyboard=InlineKeyboardMarkup([])):
+        return DialogScheme.Dialog(text, keyboard)
 
 
 class ElectronicTracksBot:
     _MAIN_MENU, _EDIT_PROPERTY, _SET_NEW_VALUE = range(3)
 
-    _MAIN_DIALOG = {
-        'TEXT': '- Author -\n{}\n- Title -\n{}\n',
-        'KEYBOARD': InlineKeyboardMarkup([[InlineKeyboardButton('Edit', callback_data='EDIT'),
-                                           InlineKeyboardButton('Send', callback_data='SEND')]]),
-    }
+    _MAIN_DIALOG = DialogScheme('- Author -\n{}\n- Title -\n{}\n',
+                                InlineKeyboardMarkup([[InlineKeyboardButton('Edit', callback_data='EDIT'),
+                                                       InlineKeyboardButton('Send', callback_data='SEND')]]))
 
-    _EDIT_DIALOG = {
-        'TEXT': '- Author -\n{}\n- Title -\n{}\n',
-        'KEYBOARD': InlineKeyboardMarkup([[InlineKeyboardButton('Author', callback_data='AUTHOR'),
-                                           InlineKeyboardButton('Title', callback_data='TITLE'),
-                                           InlineKeyboardButton('Back', callback_data='BACK')]])
-    }
+    _EDIT_DIALOG = DialogScheme('- Author -\n{}\n- Title -\n{}\n',
+                                InlineKeyboardMarkup([[InlineKeyboardButton('Author', callback_data='AUTHOR'),
+                                                       InlineKeyboardButton('Title', callback_data='TITLE'),
+                                                       InlineKeyboardButton('Back', callback_data='BACK')]]))
 
-    _SET_DIALOG = {
-        'TEXT': 'Send new {}\n',
-        'KEYBOARD': InlineKeyboardMarkup([])
-    }
+    _SET_DIALOG = DialogScheme('Send new {}\n')
 
-    _DUPLICATE_TRACK_WARNING = {
-        'TEXT': 'This track is already in the collection',
-        'KEYBOARD': InlineKeyboardMarkup([])
-    }
+    _DUPLICATE_WARNING_DIALOG = DialogScheme.create_fixed('This track is already in the collection')
 
     def __init__(self, api_token, collection_manager):
         self._updater = Updater(api_token, use_context=True)
@@ -73,58 +81,53 @@ class ElectronicTracksBot:
             self._reply(update.message, str(ex))
             return None
         if not track.is_new():
-            self._reply(update.message, self._DUPLICATE_TRACK_WARNING)
+            self._reply(update.message, self._DUPLICATE_WARNING_DIALOG)
         _insert_context_property(context, {'AUTHOR': track.get_author(), 'TITLE': track.get_title()})
-        reply_dialog = _format_dialog_text(self._MAIN_DIALOG, track.get_author(), track.get_title())
-        self._reply(update.message, reply_dialog)
+        # reply_dialog = _format_dialog_text(self._MAIN_DIALOG, track.get_author(), track.get_title())
+        dialog = self._MAIN_DIALOG.finalize(track.get_author(), track.get_title())
+        self._reply(update.message, **dialog.parameterize())
         return self._MAIN_MENU
 
     def _enter_edit_mode(self, update: Update, context: CallbackContext):
-        reply_dialog = _format_dialog_text(self._EDIT_DIALOG, context.user_data['AUTHOR'], context.user_data['TITLE'])
-        self._reply(update.callback_query, reply_dialog)
+        dialog = self._EDIT_DIALOG.finalize(context.user_data['AUTHOR'], context.user_data['TITLE'])
+        self._reply(update.callback_query, **dialog.parameterize())
         return self._EDIT_PROPERTY
 
     def _return_to_main_menu(self, update: Update, context: CallbackContext):
-        reply_dialog = _format_dialog_text(self._MAIN_DIALOG, context.user_data['AUTHOR'], context.user_data['TITLE'])
-        self._reply(update.callback_query, reply_dialog)
+        dialog = self._MAIN_DIALOG.finalize(context.user_data['AUTHOR'], context.user_data['TITLE'])
+        self._reply(update.callback_query, **dialog.parameterize())
         return self._MAIN_MENU
 
     def _select_property_to_edit(self, update: Update, context: CallbackContext):
         query = update.callback_query
         context.user_data['EDIT'] = query.data
-        reply_dialog = _format_dialog_text(self._SET_DIALOG, query.data)
-        self._reply(query, reply_dialog)
+        dialog = self._SET_DIALOG.finalize(query.data)
+        self._reply(query, **dialog.parameterize())
         return self._SET_NEW_VALUE
 
     def _set_new_value(self, update: Update, context: CallbackContext):
         new_value = update.message.text
         property_to_edit = context.user_data['EDIT']
         context.user_data[property_to_edit] = new_value
-        reply_dialog = _format_dialog_text(self._MAIN_DIALOG, context.user_data['AUTHOR'], context.user_data['TITLE'])
-        self._reply(update.message, reply_dialog)
+        dialog = self._MAIN_DIALOG.finalize(context.user_data['AUTHOR'], context.user_data['TITLE'])
+        self._reply(update.message, **dialog.parameterize())
         return self._MAIN_MENU
 
     def _send_track(self, update: Update, context: CallbackContext):
-        '''
-        query = update.callback_query
-        dialog = self._SET_DIALOG
-        dialog['TEXT'] = 'sent!'
-        self._reply(query, dialog)
-        '''
         pass
 
     @singledispatchmethod
-    def _reply(self, obj, dialog):
+    def _reply(self, obj, **dialog):
         raise NotImplementedError('\'obj\' type must be telegram.Message or telegram.CallbackQuery')
 
     @_reply.register
-    def _(self, message: Message, dialog):
-        message.reply_text(dialog['TEXT'], reply_markup=dialog['KEYBOARD'])
+    def _(self, message: Message, **dialog):
+        message.reply_text(**dialog)
 
     @_reply.register
-    def _(self, query: CallbackQuery, dialog):
+    def _(self, query: CallbackQuery, **dialog):
         query.answer()
-        query.edit_message_text(dialog['TEXT'], reply_markup=dialog['KEYBOARD'])
+        query.edit_message_text(**dialog)
 
     def start_accepting_requests(self):
         self._updater.start_polling()
