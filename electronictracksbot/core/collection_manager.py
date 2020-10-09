@@ -29,7 +29,7 @@ class CollectionManager:
         self._tracks_collector = TracksCollector(download_path)
         self._database_manager = DatabaseManager(db_path)
 
-    def collectFromYoutube(self, track_link) -> Track:
+    def collect_from_youtube(self, track_link) -> Track:
         self._tracks_collector.acquire_metadata(track_link)
         author = self._tracks_collector.get_author()
         title = self._tracks_collector.get_title()
