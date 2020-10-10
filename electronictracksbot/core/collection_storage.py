@@ -34,6 +34,9 @@ class DatabaseManager:
         author.formatted_name = author_name
         author.save()
 
+    def update_track(self, author_name, title, new_author, new_title):
+        pass
+
     def exists_track(self, author_name, title) -> bool:
         try:
             author = Author.get(name=author_name.lower())

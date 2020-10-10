@@ -1,1 +1,1 @@
-from .collection_manager import CollectionManager, Track
+from .collection_manager import CollectionManager, GenericTrack
