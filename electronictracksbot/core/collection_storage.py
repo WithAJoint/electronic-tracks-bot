@@ -17,6 +17,11 @@ class Track(BaseModel):
     author = ForeignKeyField(Author, backref='tracks')
     filepath = CharField()
 
+    class Meta:
+        indexes = (
+            (('title', 'author_id'), True),
+        )
+
 
 class DatabaseManager:
     _cached_track = None
