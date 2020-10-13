@@ -8,11 +8,6 @@ from electronictracksbot.config_reader import ConfigReader
 from electronictracksbot.core import CollectionManager
 
 
-def _insert_context_property(context: CallbackContext, properties: dict):
-    for key, value in properties.items():
-        context.user_data[key] = value
-
-
 class DialogScheme:
 
     def __init__(self, text_template, keyboard=InlineKeyboardMarkup([])):
