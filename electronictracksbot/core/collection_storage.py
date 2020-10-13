@@ -1,4 +1,4 @@
-from peewee import SqliteDatabase, Model, CharField, ForeignKeyField
+from peewee import SqliteDatabase, Model, CharField, BlobField, ForeignKeyField
 
 
 class BaseModel(Model):
@@ -16,6 +16,7 @@ class Track(BaseModel):
     formatted_title = CharField()
     author = ForeignKeyField(Author, backref='tracks')
     filepath = CharField()
+    filehash = BlobField(null=True)
 
     class Meta:
         indexes = (
